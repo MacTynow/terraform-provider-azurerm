@@ -206,6 +206,12 @@ func resourceArmKubernetesCluster() *schema.Resource {
 							Optional: true,
 							Elem:     &schema.Schema{Type: schema.TypeString},
 						},
+
+						"custom_node_labels": {
+							Type:     schema.TypeMap,
+							Optional: true,
+							Elem:     &schema.Schema{Type: schema.TypeString},
+						},
 					},
 				},
 			},
@@ -1080,6 +1086,10 @@ func expandKubernetesClusterAgentPoolProfiles(d *schema.ResourceData) ([]contain
 			profile.NodeTaints = nodeTaints
 		}
 
+		if customNodeLabels := config["custom_node_labels"]; len(*customNodeLabels) > 0 {
+			profile.customNodeLabels = customNodeLabels
+		}
+
 		profiles = append(profiles, profile)
 	}
 
@@ -1149,6 +1159,10 @@ func flattenKubernetesClusterAgentPoolProfiles(profiles *[]containerservice.Mana
 
 		if profile.NodeTaints != nil {
 			agentPoolProfile["node_taints"] = *profile.NodeTaints
+		}
+
+		if profile.customNodeLabels != nil {
+			agentPoolProfile["custom_node_labels"] = *profile.customNodeLabels
 		}
 
 		agentPoolProfiles = append(agentPoolProfiles, agentPoolProfile)

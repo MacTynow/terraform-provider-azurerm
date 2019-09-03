@@ -850,6 +850,29 @@ func TestAccAzureRMKubernetesCluster_nodeTaints(t *testing.T) {
 	})
 }
 
+func TestAccAzureRMKubernetesCluster_customNodeLabels(t *testing.T) {
+	resourceName := "azurerm_kubernetes_cluster.test"
+	ri := tf.AccRandTimeInt()
+	clientId := os.Getenv("ARM_CLIENT_ID")
+	clientSecret := os.Getenv("ARM_CLIENT_SECRET")
+	config := testAccAzureRMKubernetesCluster_customNodeLabels(ri, clientId, clientSecret, testLocation())
+
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck:     func() { testAccPreCheck(t) },
+		Providers:    testAccProviders,
+		CheckDestroy: testCheckAzureRMKubernetesClusterDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: config,
+				Check: resource.ComposeTestCheckFunc(
+					testCheckAzureRMKubernetesClusterExists(resourceName),
+					resource.TestCheckResourceAttr(resourceName, "agent_pool_profile.1.custom_node_labels['bar']", "lulz"),
+				),
+			},
+		},
+	})
+}
+
 func TestAccAzureRMKubernetesCluster_nodeResourceGroup(t *testing.T) {
 	resourceName := "azurerm_kubernetes_cluster.test"
 	ri := tf.AccRandTimeInt()
@@ -2152,6 +2175,45 @@ resource "azurerm_kubernetes_cluster" "test" {
 	node_taints = [
       "key=value:NoSchedule"
 	]
+  }
+
+  service_principal {
+    client_id     = "%s"
+    client_secret = "%s"
+  }
+}
+`, rInt, location, rInt, rInt, clientId, clientSecret)
+}
+
+func testAccAzureRMKubernetesCluster_customNodeLabels(rInt int, clientId string, clientSecret string, location string) string {
+	return fmt.Sprintf(`
+resource "azurerm_resource_group" "test" {
+  name     = "acctestRG-%d"
+  location = "%s"
+}
+
+resource "azurerm_kubernetes_cluster" "test" {
+  name                = "acctestaks%d"
+  location            = "${azurerm_resource_group.test.location}"
+  resource_group_name = "${azurerm_resource_group.test.name}"
+  dns_prefix          = "acctestaks%d"
+
+  agent_pool_profile {
+    name    = "default"
+    count   = "1"
+    type    = "AvailabilitySet"
+    vm_size = "Standard_DS2_v2"
+  }
+
+  agent_pool_profile {
+    name    			= "pool1"
+    count   			= "1"
+    type    			= "AvailabilitySet"
+    vm_size 			= "Standard_DS2_v2"
+	custom_node_labels 	= {
+	  bar = "lulz",
+	  baz = "foo"
+	}
   }
 
   service_principal {
